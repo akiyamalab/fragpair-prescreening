@@ -30,3 +30,28 @@
 *.exe
 *.out
 *.app
+
+.vscode
+
+/objs/*
+/atomgrid-gen
+/*/*~
+/*/*/*/*~
+/*/*#
+/*/*/*/*#
+*.swp
+*.sh.o*-*
+*.o*
+*.e*
+*.log
+*.grid
+*docked*.sdf
+testdata/*.csv
+
+/fragment-query
+# Output
+*.sh
+*.txt
+# For OpenDX
+/OpenDX
+/opendx-gen
