@@ -1,0 +1,7 @@
+OUTERBOX 20, 20, 20
+BOX_CENTER 0.3826, 81.705, 109.195
+SCORING_PITCH 0.25, 0.25, 0.25
+RECEPTOR testdata/2HU4_A_r.pdbqt
+FRAGMENTS testdata/repfs_50.sdf
+OUTPUT testdata/query.txt
+GRID_FOLDER testdata/grid
