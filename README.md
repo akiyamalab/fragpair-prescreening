@@ -1,7 +1,13 @@
 # FragPair-PreScreening
----
 
 有望なフラグメント空間配置対に基づく化合物プレスクリーニング
+
+## Workflow
+
+入力フラグメントをドッキングし、**フラグメント空間配置対**を評価します。
+- フラグメント空間配置対：フラグメント対とその相対距離
+
+![workflow](https://github.com/akiyamalab/fragpair-prescreening/assets/107383565/aa57b668-e0e0-4356-a60b-40a40a56b35c)
 
 ## Installation
 
