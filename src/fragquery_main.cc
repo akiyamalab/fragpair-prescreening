@@ -88,17 +88,24 @@ namespace {
     logs::lout << "Grid folder name    : "+config.grid_folder     << std::endl;
   }
 
+  /**
+   * Struct for storing distance range and priority of an output query.
+   * @param dist_min minimum distance of the query
+   * @param dist_max maximum distance of the query
+   * @param priority priority of the query
+  */
   struct query_param {
     std::string smi1, smi2;
     fltype dist_min;
     fltype dist_max;
     fltype priority;
+
     query_param(const std::string& smi1, const std::string& smi2, fltype dist_min, fltype dist_max, fltype priority) 
       : smi1(smi1), smi2(smi2), dist_min(dist_min), dist_max(dist_max), priority(priority) {}
     query_param(const std::string& smi1, const std::string& smi2, std::pair<fltype, fltype> dist_range, fltype priority)
       : smi1(smi1), smi2(smi2), dist_min(dist_range.first), dist_max(dist_range.second), priority(priority) {}
     
-    // 1st: priority, 2nd: id, 3rd: dist
+    // 1st: priority, 2nd: smi, 3rd: dist
     bool operator<(const query_param& o) {
       if (std::abs(priority - o.priority) < EPS) {
         if (smi1+smi2 == o.smi1+o.smi2) return dist_min < o.dist_min;
@@ -132,12 +139,14 @@ int main(int argc, char **argv){
 
   format::DockingConfiguration config = parseArgs(argc, argv);
 
+  // set log file
   if(config.log_file == ""){
     config.log_file = config.output_file + "__" + getDate() + ".log";
   }
   logs::log_init(config.log_file, true);
   logConfig(config);
 
+  // unset obErrorLog
   if (!config.ob_err_log) {
     OpenBabel::obErrorLog.StopLogging();
     logs::lout << "obErrorLog.StopLogging" << endl;
@@ -153,16 +162,13 @@ int main(int argc, char **argv){
   int frags_sz = fragments.size(); /* the number of fragments */
   logs::lout << "number of fragments: " << frags_sz << endl;
 
-  // ================================================================
   // prepare atomgrids and rotations
-  // ================================================================
   logs::lout << logs::info << "[start] read energy grids" << endl;
   vector<AtomInterEnergyGrid> atom_grids = AtomInterEnergyGrid::readAtomGrids(config.grid_folder);
   logs::lout << logs::info << "[ end ] read energy grids" << endl;
-  // logs::lout << "atom grid size: " << atom_grids.size() << endl;
 
-  const Point3d<int>& score_num = atom_grids[0].getNum(); // # of grid points of score grids (atom grids, fragment grids)
-
+  // # of grid points of score grids (atom grids, fragment grids)
+  const Point3d<int>& score_num = atom_grids[0].getNum(); 
 
   logs::lout << logs::info << "[TIME STAMP] START MOLECULE OBJECT CONVERSION" << endl;
    vector<Fragment> fragments_frag = convert_fragments(fragments);
@@ -176,7 +182,7 @@ int main(int argc, char **argv){
   logs::lout << logs::debug << "config.efficiency : " << config.getFragmentEfficiencyString() << endl;
   prioDebug(config.priority);
 
-  logs::lout << logs::info << "[TIME STAMP] START CALCULATING BY FRAGGRID" << endl;
+  logs::lout << logs::info << "[TIME STAMP] START CALCULATING FRAGGRID" << endl;
 
   std::chrono::milliseconds query_time(0);
   std::chrono::milliseconds pose_time(0);
@@ -189,6 +195,7 @@ int main(int argc, char **argv){
 
   progress_bar grid_prog(frags_sz, "Searching fragment best poses", config.show_bar);
 
+  // calculate best poses of each fragment
   for (int f_ind = 0; f_ind < frags_sz; ++f_ind) {
     FragmentInterEnergyGrid frag_grid(fragments_frag[f_ind], makeRotations60(), atom_grids, distance_grid);
     best_poses[f_ind] = frag_grid.getBestPoses(config.priority, calcFragmentEfficiency(fragments_frag[f_ind].heavyNum(), config.efficiency));
@@ -196,7 +203,7 @@ int main(int argc, char **argv){
   }
   grid_prog.clear();
 
-  logs::lout << logs::info << "[TIME STAMP] END   CALCULATING BY FRAGGRID" << endl;
+  logs::lout << logs::info << "[TIME STAMP] END   CALCULATING FRAGGRID" << endl;
 
 
   auto t2 = std::chrono::system_clock::now();
@@ -204,27 +211,35 @@ int main(int argc, char **argv){
   pose_time += std::chrono::duration_cast< std::chrono::milliseconds >(t2 - t1);
   logs::lout << logs::info << "[TIME STAMP] pose_time  : " << pose_time.count() << endl;
 
-  std::chrono::milliseconds priority_time(0);
-
 
   logs::lout << logs::info << "[TIME STAMP] START CALCULATING DISTANCE PRIORITIES" << endl;
+
+  
+  std::chrono::milliseconds priority_time(0);
 
   progress_bar output_prog(frags_sz*frags_sz, "Calculating distance priorities", config.show_bar);
 
   vector<query_param> queries;
+  // calculate fragpair queries
   for (int i = 0; i < frags_sz; ++i) {
     for (int j = i; j < frags_sz; ++j) {
+      // get best poses of each fragment
       const vector<FragPose>& poses1 = best_poses[i];
       const vector<FragPose>& poses2 = best_poses[j];
       query::QueryPriority query_priority(config.priority);
+
       for (int k = 0; k < poses1.size(); ++k) {
         for (int l = (i==j)?k+1:0; l < poses2.size(); ++l) {
           // distance between two fragments
           fltype distance = (poses1[k].first - poses2[l].first).abs();
+          // append fragment arrangement pair
           query_priority.append(distance, poses1[k].second + poses2[l].second);
         }
       }
+
+      // get the priority of each distance range
       vector<query::output_query> priorities = query_priority.getPriorities();
+      // get queries
       for (int d = 0; d < priorities.size(); ++d) {
         queries.push_back(query_param(fragments_frag[i].getSmiles(), //fragments_frag[i].getFragmentID(),
                                       fragments_frag[j].getSmiles(), //fragments_frag[j].getFragmentID(), 
@@ -241,6 +256,7 @@ int main(int argc, char **argv){
   std::sort(queries.begin(), queries.end());
   ofstream outputsh(config.output_file);
   int query_size = (NUM_QUERIES == -1) ? queries.size() : min(NUM_QUERIES, (int)queries.size());
+  // output queries
   for (int i = 0; i < query_size; ++i) {
     outputsh << queries[i] << endl;
   }
@@ -260,6 +276,7 @@ int main(int argc, char **argv){
   whole_time += std::chrono::duration_cast< std::chrono::milliseconds >(t4 - t0);
 
   logs::lout << logs::info << "################ Program end ################" << endl;
+  // CPU core time
   logs::lout << logs::info << "[TIME STAMP] whole_time : " << whole_time.count() << endl;
 
   logs::close();

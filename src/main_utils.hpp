@@ -23,11 +23,33 @@ namespace main_utils {
                                       const fragdock::Point3d<int>& ratio);
 	fragdock::Vector3d operator/(fragdock::Vector3d v, fragdock::Point3d<fltype> p);
 	fragdock::Point3d<int> round(const fragdock::Vector3d& v);
-	// not restretto
+	
+  /**
+   * Convert OpenBabel molecules to Fragment.
+   * @param obmols a vector of OpenBabel molecules
+   * @return a vector of Fragment
+  */
 	std::vector<fragdock::Fragment> convert_fragments(std::vector<OpenBabel::OBMol>& obmols);
+
+  /**
+   * Calculate the fragment efficiency scale.
+   * @param heavy_num the number of heavy atoms in the fragment
+   * @param efficiency the efficiency type
+   * @return scale of the score
+  */
 	const fltype calcFragmentEfficiency(const fltype heavy_num, const FragEffi efficiency);
+
+  /**
+   * Get the description of the option.
+   * @param main the main description
+   * @param options a vector of option descriptions (option name, option description)
+   * @return the description of the option
+  */
 	std::string option_desc(const std::string main, const std::vector<std::pair<std::string, std::string> >& options);
 	
+  /**
+   * Struct for displaying progress bar.
+  */
   struct progress_bar {
     const int bar_size = 100;
     const int total;

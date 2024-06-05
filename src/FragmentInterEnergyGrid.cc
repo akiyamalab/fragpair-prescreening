@@ -72,20 +72,26 @@ namespace fragdock {
     for (int x = 0; x < score_num.x; ++x) {
       for (int y = 0; y < score_num.y; ++y) {
         for (int z = 0; z < score_num.z; ++z) {
+          // push back FragPose
           coord_scores.emplace_back(getGrid().convert(x, y, z), getSearchScore(x, y, z, scale));
         }
       }
     }
+
+    // sort by score
     sort(coord_scores.begin(), coord_scores.end(), [](const FragPose& a, const FragPose& b) {
         return a.second < b.second;
       });
 
     int ret_size = 0;
+    // get the best poses
     for (int i = 0; i < coord_scores.size(); ++i) {
       fltype min_dist = HUGE_VAL;
+      // check if the distance is too close to the existing (ret) poses
       for (int r = 0; r < ret_size; ++r) {
         min_dist = min(min_dist, (ret[r].first - coord_scores[i].first).abs());
       }
+      // if the distance is not too close, add the pose to the return value
       if (min_dist > priority.cluster_size) {
         ret[ret_size] = coord_scores[i];
         ret_size++;

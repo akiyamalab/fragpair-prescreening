@@ -25,9 +25,23 @@ namespace fragdock {
                        const InterEnergyGrid& distance_grid);
     ~FragmentInterEnergyGrid() {}
     const InterEnergyGrid& getGrid() const { return grid; }
-    // void writeFile(const std::string& filename) const;    
-    fltype getSearchScore(int x, int y, int z) const { return getGrid().getInterEnergy(x, y, z); }
+    // void writeFile(const std::string& filename) const;
+
+    /**
+     * Get the energy of the grid at the given position.
+     * @param[in] x x coordinate
+     * @param[in] y y coordinate
+     * @param[in] z z coordinate
+     * @param[in] scale a scale factor for the energy
+    */
     fltype getSearchScore(int x, int y, int z, const fltype scale=1) const { return getGrid().getInterEnergy(x, y, z) / scale; }
+    fltype getSearchScore(int x, int y, int z) const { return getGrid().getInterEnergy(x, y, z); }
+
+    /**
+     * 
+     * @param[in] priority priority configuration
+     * @param[in] scale a scale factor for the energy
+    */
     std::vector<FragPose> getBestPoses(const format::Priority& priority, const fltype scale) const;
     std::vector<FragPose> getBestPoses(const format::Priority& priority) const { return getBestPoses(priority, 1); }
   };
